@@ -1,0 +1,16 @@
+state,destination,destination_type,climate,activities,avg_cost_per_day,best_season,accessibility,safety_rating,accommodation_type
+Cross River,Obudu Mountain Resort,Nature/Adventure,Cool,"Hiking, Cable Car, Nature Walk",25000,Nov - Feb (Dry Season),Moderate,8.5,Resort
+Lagos,Lekki Conservation Centre,Nature/Leisure,Humid,"Canopy Walk, Picnic",18000,Dec - March,Easy,9,Hotel
+Osun,Erin Ijesha Waterfalls,Nature/Adventure,Mild,"Waterfall Climbing, Swimming",12000,June - August,Moderate,8,Guest House
+Bauchi,Yankari Game Reserve,Wildlife/Safari,Hot,"Safari, Hot Spring Bathing",20000,Nov - Apr,Moderate,7.5,Lodge
+Kaduna,Kajuru Castle,Architecture/Adventure,Warm,"Tour, Pool, Hill Climb",22000,Dec - Feb,Hard,7,Castle
+FCT Abuja,Jabi Lake,Leisure/Urban,Hot,"Boat Ride, Shopping, Picnic",17000,All Year,Easy,9.2,Hotel
+Ekiti,Ikogosi Warm Springs,Nature/Relaxation,Mild,"Nature Walk, Relaxation",15000,Dec - March,Moderate,8.3,Resort
+Ogun,Olumo Rock,Cultural/Adventure,Humid,"Rock Climbing, Cultural Tour",14000,Nov - March,Easy,8,Guest House
+Enugu,Ngwo Pine Forest,Nature/Adventure,Mild,"Hiking, Cave Exploration",16000,Oct - Feb,Moderate,8.5,Lodge
+Ondo,Idanre Hills,Historical/Nature,Mild,"Climbing, Sightseeing",15000,Dec - April,Moderate,8.2,Hotel
+Rivers,Port Harcourt Pleasure Park,Leisure/Urban,Humid,"Boating, Games, Picnic",18000,All Year,Easy,8.9,Hotel
+Kano,Gidan Makama Museum,Historical/Cultural,Hot,"Museum Tour, Photography",13000,Oct - Feb,Moderate,7.8,Hotel
+Delta,Abraka Turf and Country Club,Leisure/Resort,Hot,"Horse Riding, Relaxation",20000,Nov - Jan,Moderate,8,Resort
+Taraba,Mambilla Plateau,Nature/Adventure,Cool,"Hiking, Nature Tour",18000,March - May,Hard,7,Lodge
+Benue,Ikwe Holiday Resort,Relaxation/Leisure,Warm,"Boating, Beach Walk",14000,Jan - March,Moderate,7.5,Resort
