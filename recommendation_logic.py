@@ -17,6 +17,7 @@ def classify_budget(budget):
     low_budget = fuzz.trapmf(budget_range, [0, 0, 12000, 18000])
     medium_budget = fuzz.trimf(budget_range, [15000, 25000, 35000])  
     high_budget = fuzz.trapmf(budget_range, [32000, 40000, 50000, 50000])
+    
 
     low_score = fuzz.interp_membership(budget_range, low_budget, budget)
     medium_score = fuzz.interp_membership(budget_range, medium_budget, budget)

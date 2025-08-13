@@ -1,0 +1,11 @@
+User ID,Budget,Preferred Destinations,Top-N Recommended,Precision@N,Recall@N,NDCG@N,Mean Budget Deviation
+U1,25000,"Obudu Cattle Ranch, Erin-Ijesha Falls","Shere Hills, Obudu Mountain Resort, Farin Ruwa Falls",0.67,1.0,0.22,0.4
+U2,15000,Maiduguri National Museum,"Maiduguri National Museum, Sukur Cultural Landscape",0.5,1.0,1.0,0.4
+U3,40000,"Lekki Mall, Ibom Tropicana Entertainment Centre","Millennium Park, Ibom Tropicana Entertainment Centre",1.0,1.0,0.33,0.4
+U4,30000,"Olumo Rock, Olusegun Obasanjo Presidential Library","Olumo Rock, OOPL Wildlife Park",0.5,0.5,0.67,0.4
+U5,20000,"Nike Art Gallery, Lekki Conservation Centre","Lekki Conservation Centre, Freedom Park",0.5,0.5,0.67,0.4
+U6,18000,"National Museum Lagos, Badagry Heritage Museum","Badagry Heritage Museum, National Museum Lagos",1.0,1.0,1.0,0.4
+U7,22000,"Idanre Hills, Oke Idanre","Idanre Hills, Ado Awaye Suspended Lake",0.5,0.5,0.67,0.4
+U8,10000,"Jos Museum, Rayfield Resort","Jos Museum, Shere Hills",0.5,0.5,0.67,0.4
+U9,27000,"Awhum Waterfall, Ngwo Pine Forest and Cave","Ngwo Pine Forest and Cave, Erin-Ijesha Falls",0.5,0.5,0.67,0.4
+U10,32000,"Zuma Rock, Millennium Park","Millennium Park, Gurara Falls",0.5,0.5,0.67,0.4
