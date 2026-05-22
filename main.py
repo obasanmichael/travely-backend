@@ -1,109 +1,50 @@
-from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse
-from pydantic import BaseModel
-from typing import Optional, List
-from recommendation_logic import get_recommendations
+import logging
+
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-import traceback
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+
+from api.routes.destinations import router as destinations_router
+from api.routes.health import router as health_router
+from api.routes.recommendations import limiter, router as recommendations_router
+from core.config import get_settings
+from core.exceptions import global_exception_handler, http_exception_handler
+from services.data_cache import load_catalog
+
+logging.basicConfig(level=logging.INFO)
+settings = get_settings()
 
 app = FastAPI(
     title="Travely API",
     description="API for personalized travel recommendations in Nigeria",
-    version="2.0.0"
+    version="2.0.0",
+    docs_url="/docs" if settings.docs_enabled else None,
+    redoc_url="/redoc" if settings.docs_enabled else None,
 )
+
+
+@app.on_event("startup")
+async def startup_load_catalog() -> None:
+    load_catalog()
+
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_exception_handler(HTTPException, http_exception_handler)
+app.add_exception_handler(Exception, global_exception_handler)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins for testing, restrict in production
+    allow_origins=settings.allowed_origins_list,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
-class RecommendationRequest(BaseModel):
-    budget: float
-    destination_type: Optional[str] = None
-    activity_type: Optional[str] = None
+app.add_middleware(SlowAPIMiddleware)
 
-class Recommendation(BaseModel):
-    destination: str
-    state: str
-    city: str
-    destination_type: str
-    activities: str
-    climate: str
-    avg_cost_per_day: float
-    best_season: str
-    accommodation_type: str
-    nearby_hotel: str
-    hotel_price_range: str
-    feeding_cost_range: str
-    necessities_range: str
-    budget_category: str
-    score: float
-
-class RecommendationResponse(BaseModel):
-    user_budget_category: str
-    recommendations: List[Recommendation]
-
-@app.exception_handler(Exception)
-async def global_exception_handler(request: Request, exc: Exception):
-    """Global exception handler to provide better error details"""
-    return JSONResponse(
-        status_code=500,
-        content={
-            "detail": f"An error occurred: {str(exc)}",
-            "traceback": traceback.format_exc()
-        },
-    )
-
-@app.get("/", tags=["Home"])
-def home():
-    """
-    Welcome endpoint for the Travely Recommendation API
-    """
-    return {
-        "message": "Welcome to the Travely Recommendation API",
-        "documentation": "/docs",
-        "version": "2.0.0"
-    }
-
-@app.post("/recommendations", response_model=RecommendationResponse, tags=["Recommendations"])
-def recommend(request: RecommendationRequest):
-    """
-    Get personalized travel recommendations based on user preferences
-    """
-    try:
-        # Input validation
-        if request.budget <= 0:
-            raise HTTPException(status_code=400, detail="Budget must be greater than 0")
-        
-        # Call recommendation logic with simplified inputs
-        recommendations = get_recommendations(
-            budget=request.budget,
-            destination_type=request.destination_type,
-            activity_type=request.activity_type
-        )
-        
-        # Check if recommendations were returned
-        if not recommendations or "recommendations" not in recommendations:
-            return {
-                "user_budget_category": "Medium",
-                "recommendations": []
-            }
-            
-        return recommendations
-        
-    except Exception as e:
-        # Log the full error for debugging
-        print(f"Error in /recommendations endpoint: {str(e)}")
-        print(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=f"Error generating recommendations: {str(e)}")
-
-# Health check endpoint for monitoring
-@app.get("/health", tags=["Health"])
-def health_check():
-    """
-    Health check endpoint to verify API is running properly
-    """
-    return {"status": "healthy"}
+app.include_router(health_router)
+app.include_router(recommendations_router)
+app.include_router(destinations_router)
