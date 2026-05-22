@@ -43,7 +43,12 @@ def init_firebase_admin() -> None:
     settings = get_settings()
 
     if settings.google_application_credentials_json:
-        cred_dict = json.loads(settings.google_application_credentials_json)
+        try:
+            cred_dict = json.loads(settings.google_application_credentials_json)
+        except json.JSONDecodeError as exc:
+            logger.error("Invalid GOOGLE_APPLICATION_CREDENTIALS_JSON: %s", exc)
+            return
+
         cred = credentials.Certificate(cred_dict)
         firebase_admin.initialize_app(
             cred, {"projectId": settings.firebase_project_id or cred_dict.get("project_id")}

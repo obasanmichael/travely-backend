@@ -24,11 +24,24 @@ Last updated: 2026-05-21
 
 ### Backend (Render)
 
-1. Set env vars from `.env.example` (never commit secrets).
-2. Set `DOCS_ENABLED=false` in production.
-3. Set `AUTH_DISABLED=false` and `GOOGLE_APPLICATION_CREDENTIALS_JSON`.
-4. Use paid tier or min instances = 1 to reduce cold starts (target P95 < 2s warm).
-5. Verify: `curl https://<api>/health`
+1. Use **Python 3.11** (`runtime.txt` or `PYTHON_VERSION=3.11.11` in Render dashboard).
+2. Build command: `pip install -r requirements.txt`
+3. Start command: `uvicorn main:app --host 0.0.0.0 --port $PORT`
+4. Health check path: `/health`
+5. Set env vars from `.env.example` (never commit secrets).
+6. Set `DOCS_ENABLED=false` in production.
+7. Set `AUTH_DISABLED=false` and paste the full Firebase service account JSON into `GOOGLE_APPLICATION_CREDENTIALS_JSON` (single line).
+8. Set `ALLOWED_ORIGINS` to your Vercel URL(s), comma-separated.
+9. Use paid tier or min instances = 1 to reduce cold starts (target P95 < 2s warm).
+10. Verify: `curl https://<api>/health`
+
+**Common deploy failures**
+
+| Symptom | Fix |
+|---------|-----|
+| `No matching distribution found for contourpy` | Render is on Python 3.9; set Python 3.11 and use the slim `requirements.txt` (no matplotlib). |
+| Service starts then 401 on API | Set `GOOGLE_APPLICATION_CREDENTIALS_JSON` and `AUTH_DISABLED=false`. |
+| CORS errors from Vercel | Add frontend origin to `ALLOWED_ORIGINS`. |
 
 ### Frontend (Vercel)
 

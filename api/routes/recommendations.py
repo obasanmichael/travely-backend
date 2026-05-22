@@ -49,16 +49,16 @@ class RecommendationResponse(BaseModel):
 @limiter.limit("30/minute")
 def recommend(
     request: Request,
-    body: RecommendationRequest,
+    payload: RecommendationRequest,
     token: Dict[str, Any] = Depends(verify_firebase_token),
 ) -> Dict[str, Any]:
     uid = token.get("uid", "unknown")
     logger.info("Recommendation request from uid=%s", uid)
 
     recommendations = get_recommendations(
-        budget=body.budget,
-        destination_type=body.destination_type,
-        activity_type=body.activity_type,
+        budget=payload.budget,
+        destination_type=payload.destination_type,
+        activity_type=payload.activity_type,
     )
 
     if not recommendations or "recommendations" not in recommendations:

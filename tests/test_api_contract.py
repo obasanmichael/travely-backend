@@ -1,32 +1,26 @@
 from __future__ import annotations
 
-import os
-
 import pytest
 from fastapi.testclient import TestClient
 
-os.environ.setdefault("AUTH_DISABLED", "true")
-os.environ.setdefault("ENV", "development")
 
-from main import app  # noqa: E402
+@pytest.fixture
+def client():
+    from core.config import get_settings
 
-client = TestClient(app)
+    get_settings.cache_clear()
+    from main import app
 
-
-@pytest.fixture(autouse=True)
-def load_catalog():
-    from services.data_cache import load_catalog
-
-    load_catalog()
+    return TestClient(app)
 
 
-def test_health_returns_ok():
+def test_health_returns_ok(client):
     response = client.get("/health")
     assert response.status_code == 200
     assert response.json() == {"status": "healthy"}
 
 
-def test_recommendations_requires_valid_budget():
+def test_recommendations_requires_valid_budget(client):
     response = client.post(
         "/recommendations",
         json={"budget": 0, "destination_type": "Nature/Adventure", "activity_type": "Hiking"},
@@ -34,7 +28,7 @@ def test_recommendations_requires_valid_budget():
     assert response.status_code == 422
 
 
-def test_recommendations_returns_ranked_results():
+def test_recommendations_returns_ranked_results(client):
     response = client.post(
         "/recommendations",
         json={
@@ -51,7 +45,7 @@ def test_recommendations_returns_ranked_results():
     assert "destination" in body["recommendations"][0]
 
 
-def test_destinations_list_returns_catalog():
+def test_destinations_list_returns_catalog(client):
     response = client.get("/destinations")
     assert response.status_code == 200
     destinations = response.json()
@@ -59,14 +53,14 @@ def test_destinations_list_returns_catalog():
     assert {"destination", "state", "city", "avg_cost_per_day"} <= set(destinations[0].keys())
 
 
-def test_destinations_filter_by_state():
+def test_destinations_filter_by_state(client):
     all_destinations = client.get("/destinations").json()
     sample_state = all_destinations[0]["state"]
     filtered = client.get("/destinations", params={"state": sample_state}).json()
     assert all(item["state"].lower() == sample_state.lower() for item in filtered)
 
 
-def test_recommendations_without_auth_when_disabled():
+def test_recommendations_without_auth_when_disabled(client):
     response = client.post(
         "/recommendations",
         json={"budget": 15000, "destination_type": "Nature/Adventure", "activity_type": "Hiking"},
@@ -74,7 +68,7 @@ def test_recommendations_without_auth_when_disabled():
     assert response.status_code == 200
 
 
-def test_request_id_header_present():
+def test_request_id_header_present(client):
     response = client.get("/health")
     assert response.status_code == 200
     assert "x-request-id" in response.headers
