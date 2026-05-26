@@ -9,6 +9,8 @@ services:
     envVars:
       - key: ENV
         value: production
+      - key: ALLOWED_ORIGINS
+        value: https://travely-app-two.vercel.app
       - key: AUTH_DISABLED
         value: "false"
       - key: DOCS_ENABLED

@@ -20,6 +20,12 @@ def test_health_returns_ok(client):
     assert response.json() == {"status": "healthy"}
 
 
+def test_openapi_schema_generates(client):
+    response = client.get("/openapi.json")
+    assert response.status_code == 200
+    assert "/recommendations" in response.json()["paths"]
+
+
 def test_recommendations_requires_valid_budget(client):
     response = client.post(
         "/recommendations",

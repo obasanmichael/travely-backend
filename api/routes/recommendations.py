@@ -1,9 +1,7 @@
-from __future__ import annotations
-
 import logging
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Body, Depends, Request
 from pydantic import BaseModel, Field
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -49,7 +47,7 @@ class RecommendationResponse(BaseModel):
 @limiter.limit("30/minute")
 def recommend(
     request: Request,
-    payload: RecommendationRequest,
+    payload: RecommendationRequest = Body(...),
     token: Dict[str, Any] = Depends(verify_firebase_token),
 ) -> Dict[str, Any]:
     uid = token.get("uid", "unknown")
