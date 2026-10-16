@@ -3,7 +3,13 @@ venv/
 __pycache__/
 *.py[cod]
 .env
+.env.*
+!.env.example
 *.egg-info/
 .pytest_cache/
 .mypy_cache/
-package-lock.json
+.ruff_cache/
+.coverage
+htmlcov/
+.ipynb_checkpoints/
+.DS_Store

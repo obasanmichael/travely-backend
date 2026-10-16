@@ -1,6 +1,6 @@
 target-version = "py39"
 line-length = 100
-exclude = ["venv", ".venv", "__pycache__", ".ipynb_checkpoints", ".pytest_cache", "evaluate.py", "myfile.py"]
+exclude = ["venv", ".venv", "__pycache__", ".pytest_cache"]
 
 [lint]
 select = ["E", "F", "I"]
