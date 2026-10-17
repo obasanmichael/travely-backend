@@ -37,3 +37,23 @@ def test_production_rejects_auth_disabled(monkeypatch):
 
     with pytest.raises(ValueError, match="AUTH_DISABLED"):
         Settings(env="production", auth_disabled=True, _env_file=None)
+
+
+def test_production_requires_database_url():
+    from core.config import Settings
+
+    with pytest.raises(ValueError, match="DATABASE_URL"):
+        Settings(env="production", auth_disabled=False, database_url="", _env_file=None)
+
+
+def test_readyz_not_ready_when_database_unreachable(client, monkeypatch):
+    from db import session as db_session
+
+    async def _down() -> bool:
+        return False
+
+    monkeypatch.setattr(db_session, "engine_configured", lambda: True)
+    monkeypatch.setattr(db_session, "ping", _down)
+    response = client.get("/readyz")
+    assert response.status_code == 503
+    assert response.json()["checks"]["database"] is False

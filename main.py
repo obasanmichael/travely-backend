@@ -22,6 +22,7 @@ from api.routes.recommendations import limiter, router as recommendations_router
 from core.config import init_firebase_admin
 from core.exceptions import global_exception_handler, http_exception_handler
 from core.middleware import RequestLoggingMiddleware
+from db.session import dispose_engine, init_engine
 from services.data_cache import load_catalog
 
 logger = logging.getLogger(__name__)
@@ -30,9 +31,12 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     init_firebase_admin()
+    if settings.database_url:
+        init_engine(settings.database_url)
     load_catalog()
     logger.info("Travely API started env=%s docs_enabled=%s", settings.env, settings.docs_enabled)
     yield
+    await dispose_engine()
     logger.info("Travely API shutting down")
 
 

@@ -25,6 +25,8 @@ class Settings(BaseSettings):
     def _guard_production(self) -> "Settings":
         if self.is_production and self.auth_disabled:
             raise ValueError("AUTH_DISABLED cannot be true when ENV=production")
+        if self.is_production and not self.database_url:
+            raise ValueError("DATABASE_URL is required when ENV=production")
         return self
 
     @property

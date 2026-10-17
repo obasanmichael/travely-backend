@@ -5,6 +5,7 @@ from typing import Dict
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 
+from db import session as db_session
 from services.data_cache import get_catalog_size
 
 router = APIRouter(tags=["Health"])
@@ -16,8 +17,10 @@ def liveness() -> Dict[str, str]:
 
 
 @router.get("/readyz")
-def readiness() -> JSONResponse:
+async def readiness() -> JSONResponse:
     checks = {"catalog": get_catalog_size() > 0}
+    if db_session.engine_configured():
+        checks["database"] = await db_session.ping()
     ready = all(checks.values())
     return JSONResponse(
         status_code=200 if ready else 503,
