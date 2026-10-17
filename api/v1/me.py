@@ -9,7 +9,7 @@ from sqlalchemy import delete, select, text, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.v1.schemas import DestinationOut
+from api.v1.schemas import DestinationOut, RecommendationResponse, RunDetail
 from api.v1.serializers import destination_out
 from core.security import verify_firebase_token
 from db import session as db_session
@@ -114,6 +114,24 @@ async def runs(
         )
         for r in rows
     ]
+
+
+@router.get("/runs/{run_id}", response_model=RunDetail)
+async def run_detail(
+    run_id: UUID,
+    token: dict = Depends(verify_firebase_token),
+    session: AsyncSession = Depends(_session),
+) -> RunDetail:
+    """One stored trip. Scoped to the caller: someone else's run id is just a 404."""
+    row = (await session.execute(
+        select(RecommendationRun.id, RecommendationRun.created_at, RecommendationRun.inputs, RecommendationRun.outputs)
+        .where(RecommendationRun.id == run_id, RecommendationRun.uid == token["uid"])
+    )).one_or_none()
+    if row is None:
+        raise HTTPException(status_code=404, detail="We couldn't find that trip")
+    outputs = RecommendationResponse.model_validate(row.outputs)
+    outputs.run_id = str(row.id)
+    return RunDetail(id=row.id, created_at=row.created_at, inputs=row.inputs, outputs=outputs)
 
 
 @router.post("/merge", status_code=204)

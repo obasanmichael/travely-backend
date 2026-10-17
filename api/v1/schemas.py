@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from datetime import date
-from typing import Literal, Optional
+from datetime import date, datetime
+from typing import Any, Literal, Optional
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -154,3 +155,15 @@ class PublicSample(BaseModel):
     pick: RecommendationOut
     places: int
     states: int
+
+
+class RunDetail(BaseModel):
+    id: UUID
+    created_at: datetime
+    inputs: dict[str, Any]
+    outputs: RecommendationResponse
+
+
+class BudgetBandResponse(BaseModel):
+    band: str
+    per_person_per_day: float

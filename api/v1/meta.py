@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 
-from api.v1.schemas import MetaResponse, StateOut, TagOut
+from api.v1.schemas import BudgetBandResponse, MetaResponse, StateOut, TagOut
 from engine.costs import EATING_OUT_MARKUP
+from engine.fuzzy import budget_band
 from engine.taxonomy import TAXONOMY
 from services import snapshot_store
 
@@ -30,3 +31,9 @@ def meta() -> MetaResponse:
         catalog_size=snapshot.size,
         catalog_version=snapshot.catalog_version,
     )
+
+
+@router.get("/meta/budget-band", response_model=BudgetBandResponse)
+def band(per_person_per_day: float = Query(ge=0, le=100_000_000)) -> BudgetBandResponse:
+    """The Low/Medium/High label for a daily spend, from the same fuzzy definition the engine uses."""
+    return BudgetBandResponse(band=budget_band(per_person_per_day), per_person_per_day=per_person_per_day)

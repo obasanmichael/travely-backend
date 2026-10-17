@@ -79,3 +79,42 @@ def test_guest_session_merges_into_account(empty_db, monkeypatch):
     assert merged.status_code == 204
     assert [d["name"] for d in saved] == ["Olumo Rock"]
     assert guest_left == 0
+
+
+def test_a_trip_can_be_reopened_by_id_but_only_by_its_owner(empty_db):
+    async def scenario(client):
+        created = (await client.post("/v1/recommendations", json=BODY, headers={"Idempotency-Key": "reopen-key-1"})).json()
+        run_id = created["run_id"]
+        mine = await client.get(f"/v1/me/runs/{run_id}")
+        missing = await client.get("/v1/me/runs/00000000-0000-0000-0000-000000000000")
+        # A different user can't read it.
+        from core.security import verify_firebase_token
+        from main import app
+
+        async def other():
+            return {"uid": "someone-else"}
+
+        app.dependency_overrides[verify_firebase_token] = other
+        try:
+            theirs = await client.get(f"/v1/me/runs/{run_id}")
+        finally:
+            app.dependency_overrides.pop(verify_firebase_token, None)
+        return run_id, mine, missing, theirs
+
+    run_id, mine, missing, theirs = _run(scenario)
+    assert mine.status_code == 200
+    body = mine.json()
+    assert body["id"] == run_id and body["outputs"]["run_id"] == run_id
+    assert body["inputs"]["origin_state"] == "NG-LA"
+    assert body["outputs"]["recommendations"][0]["destination"]["name"] == "Olumo Rock"
+    assert missing.status_code == 404 and theirs.status_code == 404
+
+
+def test_budget_band_label_matches_the_engines_definition(empty_db):
+    async def scenario(client):
+        return [(await client.get("/v1/meta/budget-band", params={"per_person_per_day": v})).json()["band"]
+                for v in (10_000, 50_000, 150_000)], await client.get("/v1/meta/budget-band", params={"per_person_per_day": -1})
+
+    bands, invalid = _run(scenario)
+    assert bands == ["Low", "Medium", "High"]
+    assert invalid.status_code == 422
