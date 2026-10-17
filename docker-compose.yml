@@ -12,6 +12,8 @@ services:
       ALLOWED_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
       DATABASE_URL: postgresql+asyncpg://travely:travely@db:5432/travely
       REDIS_URL: redis://redis:6379/0
+      # Local only: lets the engine use unreviewed candidates. Production refuses this.
+      CATALOG_STATUSES: published,candidate
     depends_on:
       db:
         condition: service_healthy
