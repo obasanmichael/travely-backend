@@ -48,6 +48,8 @@ def main() -> None:
     parser.add_argument("job", choices=sorted(JOBS))
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
+    # httpx logs every request URL at INFO, which drowns the job's own summary.
+    logging.getLogger("httpx").setLevel(logging.WARNING)
     asyncio.run(JOBS[args.job]())
 
 
