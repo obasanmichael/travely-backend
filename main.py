@@ -21,6 +21,8 @@ from api.routes.destinations import router as destinations_router
 from api.routes.health import router as health_router
 from api.routes.recommendations import limiter, router as recommendations_router
 from api.v1.admin import router as v1_admin_router
+from api.v1.destinations import router as v1_destinations_router
+from api.v1.me import router as v1_me_router
 from api.v1.meta import router as v1_meta_router
 from api.v1.recommendations import router as v1_recommendations_router
 from core.config import init_firebase_admin
@@ -76,7 +78,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.allowed_origins_list,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "X-Request-ID", "Idempotency-Key"],
 )
 
@@ -88,3 +90,5 @@ app.include_router(destinations_router)
 app.include_router(v1_meta_router)
 app.include_router(v1_recommendations_router)
 app.include_router(v1_admin_router)
+app.include_router(v1_destinations_router)
+app.include_router(v1_me_router)
