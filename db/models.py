@@ -22,6 +22,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     func,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
@@ -341,6 +342,8 @@ class User(Base):
     display_name: Mapped[Optional[str]] = mapped_column(Text)
     is_anonymous: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
     home_state_id: Mapped[Optional[int]] = mapped_column(ForeignKey("states.id"))
+    # Defaults that pre-fill the trip quiz: {"tier": ..., "pace": ..., "interests": {slug: love|like}}.
+    preferences: Mapped[dict] = mapped_column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
     analytics_consent: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
     marketing_consent: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
     created_at: Mapped[datetime] = _created_at()
