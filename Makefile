@@ -16,7 +16,7 @@ logs:
 test:
 	docker build -q --target test -t travely-api-test . >/dev/null
 	docker run --rm --network travely-backend_default \
-		-e TEST_DATABASE_URL=postgresql+asyncpg://travely:travely@db:5432/travely \
+		-e TEST_DATABASE_URL=postgresql+asyncpg://travely:travely@db:5432/travely_test \
 		travely-api-test pytest -q
 
 lint:
