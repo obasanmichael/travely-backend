@@ -59,3 +59,7 @@ def test_snapshot_reads_catalog_and_latest_cost_inputs(empty_db):
     assert grove.quality == 0.5  # has a Wikipedia article; no description or photo
     assert candidates.inputs.fares["NG-OS"]["bus"].amount == 9000
     assert candidates.states["NG-OS"].name == "Osun"
+    details = candidates.details[grove.id]
+    assert details.wikipedia_url.endswith("Osun-Osogbo")
+    assert details.photo is None
+    assert details.best_months == ()  # no climate loaded for this fixture

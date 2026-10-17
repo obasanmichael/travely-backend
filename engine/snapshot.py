@@ -6,7 +6,7 @@ is published, so every request ranks against a consistent view.
 from __future__ import annotations
 
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date
 from typing import Mapping, Optional, Sequence
 
@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from engine.costs import CostInputs, Observation, Place
 from engine.ranker import Destination
-from engine.season import MonthClimate
+from engine.season import MonthClimate, best_months
 
 # What makes a destination a "safer bet" when interests can't separate options.
 QUALITY_WEIGHTS = {"wikipedia": 0.5, "photo": 0.3, "description": 0.2}
@@ -29,12 +29,31 @@ class StateInfo:
 
 
 @dataclass(frozen=True)
+class Photo:
+    url: str
+    file_page_url: str
+    author: str
+    licence: str
+
+
+@dataclass(frozen=True)
+class Details:
+    """Display-only facts the ranker doesn't need."""
+
+    description: Optional[str]
+    wikipedia_url: Optional[str]
+    photo: Optional[Photo]
+    best_months: tuple[int, ...]
+
+
+@dataclass(frozen=True)
 class Snapshot:
     catalog: tuple[Destination, ...]
     inputs: CostInputs
     states: Mapping[str, StateInfo]
     catalog_version: Optional[int]
     statuses: tuple[str, ...]
+    details: Mapping[str, Details] = field(default_factory=dict)
 
     @property
     def size(self) -> int:
@@ -153,14 +172,48 @@ async def _cost_inputs(session: AsyncSession, as_of: date) -> CostInputs:
     )
 
 
+async def _details(session: AsyncSession, catalog: Sequence[Destination]) -> dict[str, Details]:
+    ids = [d.id for d in catalog]
+    if not ids:
+        return {}
+    text_rows = {
+        dest_id: (description, wikipedia_url)
+        for dest_id, description, wikipedia_url in await session.execute(
+            text("SELECT id::text, description, wikipedia_url FROM destinations WHERE id::text = ANY(:ids)"),
+            {"ids": ids},
+        )
+    }
+    photos = {
+        dest_id: Photo(url, page, author, licence)
+        for dest_id, url, page, author, licence in await session.execute(
+            text(
+                "SELECT destination_id::text, url, file_page_url, author, licence "
+                "FROM destination_media WHERE is_primary AND destination_id::text = ANY(:ids)"
+            ),
+            {"ids": ids},
+        )
+    }
+    return {
+        d.id: Details(
+            description=text_rows.get(d.id, (None, None))[0],
+            wikipedia_url=text_rows.get(d.id, (None, None))[1],
+            photo=photos.get(d.id),
+            best_months=tuple(best_months(d.climate, d.tags)),
+        )
+        for d in catalog
+    }
+
+
 async def load_snapshot(
     session: AsyncSession, statuses: Sequence[str] = ("published",), as_of: Optional[date] = None
 ) -> Snapshot:
     version = await session.scalar(text("SELECT max(id) FROM catalog_versions"))
+    catalog = tuple(await _destinations(session, statuses))
     return Snapshot(
-        catalog=tuple(await _destinations(session, statuses)),
+        catalog=catalog,
         inputs=await _cost_inputs(session, as_of or date.today()),
         states=await _states(session),
         catalog_version=version,
         statuses=tuple(statuses),
+        details=await _details(session, catalog),
     )

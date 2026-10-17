@@ -20,6 +20,14 @@ class Settings(BaseSettings):
     auth_disabled: bool = False
     database_url: str = ""
     redis_url: str = ""
+    # Which destination statuses the engine may recommend. Development can add
+    # "candidate" to try the engine before anything is reviewed; production can't.
+    catalog_statuses: str = "published"
+    catalog_refresh_seconds: int = 60
+
+    @property
+    def catalog_statuses_list(self) -> tuple[str, ...]:
+        return tuple(s.strip() for s in self.catalog_statuses.split(",") if s.strip())
 
     @model_validator(mode="after")
     def _guard_production(self) -> "Settings":
@@ -27,6 +35,8 @@ class Settings(BaseSettings):
             raise ValueError("AUTH_DISABLED cannot be true when ENV=production")
         if self.is_production and not self.database_url:
             raise ValueError("DATABASE_URL is required when ENV=production")
+        if self.is_production and self.catalog_statuses_list != ("published",):
+            raise ValueError("Production may only recommend published destinations")
         return self
 
     @property

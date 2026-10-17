@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 from typing import AsyncIterator
@@ -19,10 +20,13 @@ from slowapi.middleware import SlowAPIMiddleware
 from api.routes.destinations import router as destinations_router
 from api.routes.health import router as health_router
 from api.routes.recommendations import limiter, router as recommendations_router
+from api.v1.meta import router as v1_meta_router
+from api.v1.recommendations import router as v1_recommendations_router
 from core.config import init_firebase_admin
 from core.exceptions import global_exception_handler, http_exception_handler
 from core.middleware import RequestLoggingMiddleware
 from db.session import dispose_engine, init_engine
+from services import snapshot_store
 from services.data_cache import load_catalog
 
 logger = logging.getLogger(__name__)
@@ -31,11 +35,23 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     init_firebase_admin()
+    watcher = None
     if settings.database_url:
         init_engine(settings.database_url)
+        statuses = settings.catalog_statuses_list
+        try:
+            await snapshot_store.refresh(statuses)
+        except Exception:
+            # Readiness stays false until the watcher manages a load.
+            logger.exception("initial engine snapshot load failed")
+        watcher = asyncio.create_task(
+            snapshot_store.watch(statuses, settings.catalog_refresh_seconds)
+        )
     load_catalog()
     logger.info("Travely API started env=%s docs_enabled=%s", settings.env, settings.docs_enabled)
     yield
+    if watcher is not None:
+        watcher.cancel()
     await dispose_engine()
     logger.info("Travely API shutting down")
 
@@ -60,7 +76,7 @@ app.add_middleware(
     allow_origins=settings.allowed_origins_list,
     allow_credentials=True,
     allow_methods=["GET", "POST", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
+    allow_headers=["Authorization", "Content-Type", "X-Request-ID", "Idempotency-Key"],
 )
 
 app.add_middleware(SlowAPIMiddleware)
@@ -68,3 +84,5 @@ app.add_middleware(SlowAPIMiddleware)
 app.include_router(health_router)
 app.include_router(recommendations_router)
 app.include_router(destinations_router)
+app.include_router(v1_meta_router)
+app.include_router(v1_recommendations_router)
