@@ -35,6 +35,21 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt -r requirements-dev.txt
 
+      # postgis/postgis also installs the tiger geocoder and topology extensions.
+      # Neon and local dev have plain PostGIS only, so match that.
+      - name: Match production extensions
+        run: >-
+          psql -h localhost -U travely -d travely_test -c
+          "DROP EXTENSION IF EXISTS postgis_tiger_geocoder CASCADE;
+          DROP EXTENSION IF EXISTS postgis_topology CASCADE;
+          DROP EXTENSION IF EXISTS address_standardizer_data_us CASCADE;
+          DROP EXTENSION IF EXISTS address_standardizer CASCADE;
+          DROP EXTENSION IF EXISTS fuzzystrmatch CASCADE;
+          DROP SCHEMA IF EXISTS tiger CASCADE; DROP SCHEMA IF EXISTS tiger_data CASCADE;
+          DROP SCHEMA IF EXISTS topology CASCADE;"
+        env:
+          PGPASSWORD: travely
+
       - name: Lint with ruff
         run: ruff check .
 
