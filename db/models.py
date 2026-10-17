@@ -53,6 +53,7 @@ SOURCE_KINDS = (
     "manual",
     "user_report",
 )
+ZONES = ("north_central", "north_east", "north_west", "south_east", "south_south", "south_west")
 TAG_CATEGORIES = ("nature", "activity", "culture", "leisure", "audience")
 RUN_EVENTS = ("impression", "save", "dismiss", "detail_view")
 REPORT_STATUSES = ("pending", "accepted", "rejected")
@@ -79,6 +80,7 @@ class State(Base):
     __table_args__ = (
         UniqueConstraint("country_code", "slug", name="uq_states_country_slug"),
         Index("ix_states_boundary", "boundary", postgresql_using="gist"),
+        CheckConstraint(f"zone IS NULL OR {_in('zone', ZONES)}", name="zone"),
     )
 
     id: Mapped[int] = mapped_column(Integer, Identity(), primary_key=True)
@@ -94,6 +96,8 @@ class State(Base):
         Geography("MULTIPOLYGON", srid=4326, spatial_index=False), nullable=True
     )
     boundary_source_id: Mapped[Optional[int]] = mapped_column(ForeignKey("sources.id"))
+    # Nigeria's six geopolitical zones; NBS publishes some series only at this level.
+    zone: Mapped[Optional[str]] = mapped_column(Text)
 
 
 class City(Base):
@@ -254,6 +258,20 @@ class PriceObservation(Base):
             name="has_place",
         ),
         Index("ix_price_observations_lookup", "component", "state_id", "city_id", "tier"),
+        # Re-importing the same release can't duplicate an observation.
+        UniqueConstraint(
+            "source_id",
+            "component",
+            "mode",
+            "tier",
+            "state_id",
+            "city_id",
+            "destination_id",
+            "origin_state_id",
+            "observed_on",
+            name="uq_price_observations_natural_key",
+            postgresql_nulls_not_distinct=True,
+        ),
     )
 
     id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
@@ -273,6 +291,22 @@ class PriceObservation(Base):
     source_id: Mapped[int] = mapped_column(ForeignKey("sources.id"), nullable=False)
     notes: Mapped[Optional[str]] = mapped_column(Text)
     created_at: Mapped[datetime] = _created_at()
+
+
+class FoodPrice(Base):
+    """NBS Selected Food Price Watch: one item's average price in a zone for a month."""
+
+    __tablename__ = "food_prices"
+    __table_args__ = (
+        CheckConstraint("price > 0", name="price_positive"),
+        CheckConstraint(_in("zone", ZONES), name="zone"),
+    )
+
+    zone: Mapped[str] = mapped_column(Text, primary_key=True)
+    item: Mapped[str] = mapped_column(Text, primary_key=True)
+    month: Mapped[date] = mapped_column(Date, primary_key=True)
+    price: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)
+    source_id: Mapped[int] = mapped_column(ForeignKey("sources.id"), nullable=False)
 
 
 class CpiIndex(Base):

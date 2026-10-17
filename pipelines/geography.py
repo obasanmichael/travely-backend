@@ -19,6 +19,16 @@ GEOBOUNDARIES_NGA_ADM1_URL = (
     "geoBoundaries-NGA-ADM1_simplified.geojson"
 )
 
+_ZONE_MEMBERS = {
+    "north_central": ("NG-BE", "NG-FC", "NG-KO", "NG-KW", "NG-NA", "NG-NI", "NG-PL"),
+    "north_east": ("NG-AD", "NG-BA", "NG-BO", "NG-GO", "NG-TA", "NG-YO"),
+    "north_west": ("NG-JI", "NG-KD", "NG-KE", "NG-KN", "NG-KT", "NG-SO", "NG-ZA"),
+    "south_east": ("NG-AB", "NG-AN", "NG-EB", "NG-EN", "NG-IM"),
+    "south_south": ("NG-AK", "NG-BY", "NG-CR", "NG-DE", "NG-ED", "NG-RI"),
+    "south_west": ("NG-EK", "NG-LA", "NG-OG", "NG-ON", "NG-OS", "NG-OY"),
+}
+ZONE_BY_ISO = {iso: zone for zone, members in _ZONE_MEMBERS.items() for iso in members}
+
 # geoBoundaries names that differ from the name people use.
 NAME_OVERRIDES = {"NG-FC": "Federal Capital Territory"}
 
@@ -71,6 +81,7 @@ async def seed_geography(session: AsyncSession, collection: dict[str, Any]) -> i
             "boundary": func.Geography(boundary),
             "centroid": func.Geography(func.ST_PointOnSurface(boundary)),
             "boundary_source_id": source.id,
+            "zone": ZONE_BY_ISO.get(iso),
         }
         stmt = insert(State).values(**values)
         await session.execute(

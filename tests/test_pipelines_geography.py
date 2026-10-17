@@ -57,6 +57,8 @@ def test_seed_is_idempotent_and_resolves_points(empty_db):
     assert by_iso["NG-FC"].name == "Federal Capital Territory"
     assert by_iso["NG-FC"].slug == "federal-capital-territory"
     assert by_iso["NG-LA"].boundary_source_id is not None
+    assert by_iso["NG-LA"].zone == "south_west"
+    assert by_iso["NG-FC"].zone == "north_central"
     assert lagos == by_iso["NG-LA"].id
     assert ogun == by_iso["NG-OG"].id
     assert nowhere is None
@@ -71,3 +73,10 @@ def test_rejects_features_without_nigerian_iso_codes(empty_db):
 
     with pytest.raises(ValueError, match="NG ISO"):
         asyncio.run(_run())
+
+
+def test_every_state_belongs_to_exactly_one_zone():
+    from pipelines.geography import _ZONE_MEMBERS, ZONE_BY_ISO
+
+    members = [iso for group in _ZONE_MEMBERS.values() for iso in group]
+    assert len(members) == len(set(members)) == len(ZONE_BY_ISO) == 37
