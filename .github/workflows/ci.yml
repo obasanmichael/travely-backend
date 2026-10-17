@@ -3,28 +3,66 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, revamp]
 
 jobs:
   test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgis/postgis:17-3.5
+        env:
+          POSTGRES_USER: travely
+          POSTGRES_PASSWORD: travely
+          POSTGRES_DB: travely_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U travely -d travely_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          cache: pip
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt -r requirements-dev.txt
 
+      # postgis/postgis also installs the tiger geocoder and topology extensions.
+      # Neon and local dev have plain PostGIS only, so match that.
+      - name: Match production extensions
+        run: >-
+          psql -h localhost -U travely -d travely_test -c
+          "DROP EXTENSION IF EXISTS postgis_tiger_geocoder CASCADE;
+          DROP EXTENSION IF EXISTS postgis_topology CASCADE;
+          DROP EXTENSION IF EXISTS address_standardizer_data_us CASCADE;
+          DROP EXTENSION IF EXISTS address_standardizer CASCADE;
+          DROP EXTENSION IF EXISTS fuzzystrmatch CASCADE;
+          DROP SCHEMA IF EXISTS tiger CASCADE; DROP SCHEMA IF EXISTS tiger_data CASCADE;
+          DROP SCHEMA IF EXISTS topology CASCADE;"
+        env:
+          PGPASSWORD: travely
+
       - name: Lint with ruff
-        run: ruff check api core services tests main.py scripts
+        run: ruff check .
 
       - name: Run tests
         run: pytest -q
         env:
           AUTH_DISABLED: "true"
           ENV: development
+          TEST_DATABASE_URL: postgresql+asyncpg://travely:travely@localhost:5432/travely_test
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build runtime image
+        run: docker build --target runtime -t travely-api:${{ github.sha }} .

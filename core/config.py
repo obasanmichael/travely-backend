@@ -2,6 +2,7 @@ import json
 import logging
 from functools import lru_cache
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 logger = logging.getLogger(__name__)
@@ -17,6 +18,28 @@ class Settings(BaseSettings):
     rate_limit_per_minute: int = 30
     docs_enabled: bool = True
     auth_disabled: bool = False
+    # Revocation checks call Firebase with admin credentials; local runs with only a project id turn them off.
+    auth_check_revoked: bool = True
+    database_url: str = ""
+    redis_url: str = ""
+    # Which destination statuses the engine may recommend. Development can add
+    # "candidate" to try the engine before anything is reviewed; production can't.
+    catalog_statuses: str = "published"
+    catalog_refresh_seconds: int = 60
+
+    @property
+    def catalog_statuses_list(self) -> tuple[str, ...]:
+        return tuple(s.strip() for s in self.catalog_statuses.split(",") if s.strip())
+
+    @model_validator(mode="after")
+    def _guard_production(self) -> "Settings":
+        if self.is_production and self.auth_disabled:
+            raise ValueError("AUTH_DISABLED cannot be true when ENV=production")
+        if self.is_production and not self.database_url:
+            raise ValueError("DATABASE_URL is required when ENV=production")
+        if self.is_production and self.catalog_statuses_list != ("published",):
+            raise ValueError("Production may only recommend published destinations")
+        return self
 
     @property
     def allowed_origins_list(self) -> list[str]:
@@ -58,7 +81,17 @@ def init_firebase_admin() -> None:
 
     if settings.firebase_project_id:
         try:
-            firebase_admin.initialize_app(options={"projectId": settings.firebase_project_id})
+            if settings.auth_check_revoked:
+                firebase_admin.initialize_app(options={"projectId": settings.firebase_project_id})
+            else:
+                # Verifying a token only needs Google's public keys, so no credentials are looked up.
+                class _VerifyOnly(credentials.Base):
+                    def get_credential(self):
+                        from google.auth.credentials import AnonymousCredentials
+
+                        return AnonymousCredentials()
+
+                firebase_admin.initialize_app(_VerifyOnly(), {"projectId": settings.firebase_project_id})
             logger.info("Firebase Admin initialized with project ID only")
             return
         except Exception as exc:

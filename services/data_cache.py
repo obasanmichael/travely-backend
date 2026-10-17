@@ -91,3 +91,7 @@ def get_catalog_df() -> pd.DataFrame:
     if _CATALOG_DF is None:
         return load_catalog()
     return _CATALOG_DF.copy()
+
+
+def get_catalog_size() -> int:
+    return 0 if _CATALOG_DF is None else len(_CATALOG_DF)

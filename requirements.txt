@@ -8,6 +8,8 @@ pydantic==2.11.4
 pydantic-settings==2.9.1
 python-dotenv==1.1.0
 python-multipart==0.0.20
+httpx==0.28.1
+openpyxl==3.1.5
 
 firebase-admin==6.8.0
 slowapi==0.1.9
@@ -17,3 +19,10 @@ numpy==2.2.5
 pandas==2.2.3
 scikit-learn==1.6.1
 scikit-fuzzy==0.5.0
+# Required by skfuzzy.control (the Mamdani inference engine).
+networkx==3.4.2
+
+SQLAlchemy[asyncio]==2.0.36
+asyncpg==0.30.0
+alembic==1.14.0
+GeoAlchemy2==0.16.0

@@ -1,0 +1,56 @@
+services:
+  api:
+    build:
+      context: .
+      target: runtime
+    ports:
+      - "8000:8000"
+    environment:
+      ENV: development
+      # Real token verification, so each visitor (guest or signed in) is their own user.
+      # Project id only: no service-account key is needed to verify tokens, but revocation checks need one.
+      AUTH_DISABLED: "false"
+      FIREBASE_PROJECT_ID: travely-app-6aa48
+      AUTH_CHECK_REVOKED: "false"
+      DOCS_ENABLED: "true"
+      ALLOWED_ORIGINS: http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174
+      DATABASE_URL: postgresql+asyncpg://travely:travely@db:5432/travely
+      REDIS_URL: redis://redis:6379/0
+      # Local only: lets the engine use unreviewed candidates. Production refuses this.
+      CATALOG_STATUSES: published,candidate
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  db:
+    # Match Neon's major version so migrations behave the same locally.
+    build: ./docker/db
+    environment:
+      POSTGRES_USER: travely
+      POSTGRES_PASSWORD: travely
+      POSTGRES_DB: travely
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/db/initdb:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U travely -d travely"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7.4-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  pgdata:
