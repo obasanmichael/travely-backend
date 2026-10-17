@@ -1,0 +1,49 @@
+services:
+  api:
+    build:
+      context: .
+      target: runtime
+    ports:
+      - "8000:8000"
+    environment:
+      ENV: development
+      AUTH_DISABLED: "true"
+      DOCS_ENABLED: "true"
+      ALLOWED_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
+      DATABASE_URL: postgresql+asyncpg://travely:travely@db:5432/travely
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  db:
+    # Match Neon's major version so migrations behave the same locally.
+    build: ./docker/db
+    environment:
+      POSTGRES_USER: travely
+      POSTGRES_PASSWORD: travely
+      POSTGRES_DB: travely
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U travely -d travely"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7.4-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  pgdata:
