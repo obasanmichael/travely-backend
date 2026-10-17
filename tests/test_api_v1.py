@@ -118,6 +118,18 @@ def test_recommendations_are_explained_and_priced(empty_db):
 
 
 @requires_db
+def test_long_trips_and_large_budgets_are_accepted(empty_db):
+    async def scenario(client):
+        ok = await client.post("/v1/recommendations", json={**BODY, "days": 60, "budget": 25_000_000})
+        too_long = await client.post("/v1/recommendations", json={**BODY, "days": 366})
+        return ok, too_long
+
+    ok, too_long = _run(scenario)
+    assert ok.status_code == 200
+    assert too_long.status_code == 422
+
+
+@requires_db
 def test_idempotency_key_replays_the_same_run(empty_db):
     headers = {"Idempotency-Key": "quiz-123456"}
 

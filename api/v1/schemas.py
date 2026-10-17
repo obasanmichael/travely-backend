@@ -18,7 +18,7 @@ class RecommendationRequest(BaseModel):
 
     origin_state: str = Field(pattern=r"^NG-[A-Z]{2}$", examples=["NG-LA"])
     month: Optional[int] = Field(default=None, ge=1, le=12, description="Omit for flexible dates")
-    days: int = Field(ge=1, le=30)
+    days: int = Field(ge=1, le=365)
     travellers: int = Field(ge=1, le=20)
     budget: float = Field(gt=0, le=1_000_000_000, description="Total for the whole group, in NGN")
     tier: Tier = "mid"
