@@ -90,7 +90,7 @@ GEO = {
 
 
 @requires_db
-def test_upsert_respects_reviewer_decisions(migrated_db):
+def test_upsert_respects_reviewer_decisions(empty_db):
     inside = Candidate("Q901", "Test Falls", 4.8, 7.6, tags={"waterfalls": 1.0, "nature": 0.8})
     outside = Candidate("Q902", "Abroad", -10.0, 50.0, tags={"nature": 1.0})
 

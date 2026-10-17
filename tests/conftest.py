@@ -42,3 +42,24 @@ def migrated_db():
     command.downgrade(config, "base")
     command.upgrade(config, "head")
     return config
+
+
+@pytest.fixture
+def empty_db(migrated_db):
+    """Truncate every application table so a test only sees the rows it creates."""
+    import asyncio
+
+    from sqlalchemy import text
+
+    from pipelines.db import session_scope
+
+    async def _truncate():
+        async with session_scope(TEST_DATABASE_URL) as session:
+            tables = (await session.execute(text(
+                "SELECT tablename FROM pg_tables WHERE schemaname = 'public' "
+                "AND tablename NOT IN ('alembic_version', 'spatial_ref_sys')"
+            ))).scalars().all()
+            await session.execute(text(f"TRUNCATE {', '.join(tables)} RESTART IDENTITY CASCADE"))
+
+    asyncio.run(_truncate())
+    return migrated_db

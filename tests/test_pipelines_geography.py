@@ -49,7 +49,7 @@ async def _seed_and_read():
         return by_iso, country, lagos, ogun, nowhere
 
 
-def test_seed_is_idempotent_and_resolves_points(migrated_db):
+def test_seed_is_idempotent_and_resolves_points(empty_db):
     by_iso, country, lagos, ogun, nowhere = asyncio.run(_seed_and_read())
 
     assert country.currency == "NGN"
@@ -62,7 +62,7 @@ def test_seed_is_idempotent_and_resolves_points(migrated_db):
     assert nowhere is None
 
 
-def test_rejects_features_without_nigerian_iso_codes(migrated_db):
+def test_rejects_features_without_nigerian_iso_codes(empty_db):
     bad = {"type": "FeatureCollection", "features": [{"properties": {"shapeISO": "GH-AA"}}]}
 
     async def _run():

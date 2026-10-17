@@ -17,7 +17,7 @@ def test_taxonomy_definitions_are_unique_and_valid():
 
 
 @requires_db
-def test_seed_taxonomy_is_idempotent(migrated_db):
+def test_seed_taxonomy_is_idempotent(empty_db):
     async def _run():
         async with session_scope(TEST_DATABASE_URL) as session:
             await seed_taxonomy(session)

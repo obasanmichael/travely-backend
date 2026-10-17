@@ -44,7 +44,16 @@ async def _attach_images() -> None:
     logger.info("commons images: %s", report)
 
 
+async def _fill_climate() -> None:
+    from pipelines.climate import fill_climate
+
+    async with session_scope() as session:
+        report = await fill_climate(session)
+    logger.info("climate: %s", report)
+
+
 JOBS = {
+    "fill-climate": _fill_climate,
     "attach-images": _attach_images,
     "ingest-wikidata": _ingest_wikidata,
     "seed-geography": _seed_geography,

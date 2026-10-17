@@ -83,7 +83,7 @@ def test_parse_imageinfo_drops_unlicensed_and_anonymous_files():
 
 
 @requires_db
-def test_attach_is_idempotent_and_skips_bad_licences(migrated_db):
+def test_attach_is_idempotent_and_skips_bad_licences(empty_db):
     geo = {
         "type": "FeatureCollection",
         "features": [{
