@@ -83,6 +83,7 @@ class DestinationOut(BaseModel):
     photo: Optional[PhotoOut] = None
     tags: list[str]
     best_months: list[int]
+    month_scores: list[float] = Field(description="0-1 suitability for each month, January first")
 
 
 class RecommendationOut(BaseModel):

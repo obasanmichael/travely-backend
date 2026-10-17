@@ -114,6 +114,7 @@ def test_recommendations_are_explained_and_priced(empty_db):
     assert any(r["kind"] == "interests" for r in top["reasons"])
     assert body["budget_band"] in {"Low", "Medium", "High"}
     assert body["run_id"] is None  # nothing stored without an idempotency key
+    assert top["destination"]["month_scores"] == []  # fixture has no climate
 
 
 @requires_db

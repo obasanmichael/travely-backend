@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from engine.costs import CostInputs, Observation, Place
 from engine.ranker import Destination
-from engine.season import MonthClimate, best_months
+from engine.season import MonthClimate, best_months, month_score
 
 # What makes a destination a "safer bet" when interests can't separate options.
 QUALITY_WEIGHTS = {"wikipedia": 0.5, "photo": 0.3, "description": 0.2}
@@ -44,6 +44,8 @@ class Details:
     wikipedia_url: Optional[str]
     photo: Optional[Photo]
     best_months: tuple[int, ...]
+    # Suitability per month, January first; empty without a full year of climate.
+    month_scores: tuple[float, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -199,6 +201,9 @@ async def _details(session: AsyncSession, catalog: Sequence[Destination]) -> dic
             wikipedia_url=text_rows.get(d.id, (None, None))[1],
             photo=photos.get(d.id),
             best_months=tuple(best_months(d.climate, d.tags)),
+            month_scores=(
+                tuple(month_score(c, d.tags) for c in d.climate) if len(d.climate) == 12 else ()
+            ),
         )
         for d in catalog
     }

@@ -53,6 +53,7 @@ def _serialise(result: Result, snapshot: Snapshot, request: RecommendationReques
                     photo=PhotoOut(**photo.__dict__) if photo else None,
                     tags=[t for t, _ in sorted(d.tags.items(), key=lambda kv: -kv[1])[:TOP_TAGS]],
                     best_months=list(details.best_months) if details else [],
+                    month_scores=list(details.month_scores) if details else [],
                 ),
                 score=rec.score,
                 match=rec.content,
