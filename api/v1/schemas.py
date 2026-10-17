@@ -143,3 +143,14 @@ class MetaResponse(BaseModel):
     paces: list[str]
     catalog_size: int
     catalog_version: Optional[int]
+
+
+class PublicSample(BaseModel):
+    origin: str
+    days: int
+    travellers: int
+    budget: int
+    month: int
+    pick: RecommendationOut
+    places: int
+    states: int

@@ -24,6 +24,7 @@ from api.v1.admin import router as v1_admin_router
 from api.v1.destinations import router as v1_destinations_router
 from api.v1.me import router as v1_me_router
 from api.v1.meta import router as v1_meta_router
+from api.v1.public import router as v1_public_router
 from api.v1.recommendations import router as v1_recommendations_router
 from core.config import init_firebase_admin
 from core.exceptions import global_exception_handler, http_exception_handler
@@ -88,6 +89,7 @@ app.include_router(health_router)
 app.include_router(recommendations_router)
 app.include_router(destinations_router)
 app.include_router(v1_meta_router)
+app.include_router(v1_public_router)
 app.include_router(v1_recommendations_router)
 app.include_router(v1_admin_router)
 app.include_router(v1_destinations_router)

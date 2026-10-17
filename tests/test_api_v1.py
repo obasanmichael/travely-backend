@@ -166,3 +166,16 @@ def test_service_unavailable_until_catalog_loads():
     with TestClient(app) as client:
         assert client.get("/v1/meta").status_code == 503
         assert client.post("/v1/recommendations", json=BODY).status_code == 503
+
+
+@requires_db
+def test_public_sample_is_a_real_engine_run_without_signing_in(empty_db):
+    async def scenario(client):
+        return await client.get("/v1/public/sample")
+
+    response = _run(scenario)
+    assert response.status_code == 200
+    body = response.json()
+    assert body["origin"] == "Lagos" and body["places"] == 2
+    assert body["pick"]["destination"]["name"] in {"Olumo Rock", "Lekki Conservation Centre"}
+    assert body["pick"]["cost"]["total"]["low"] > 0
