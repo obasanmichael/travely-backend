@@ -36,7 +36,16 @@ async def _ingest_wikidata() -> None:
     logger.info("wikidata ingest: %s", report)
 
 
+async def _attach_images() -> None:
+    from pipelines.commons import attach_primary_images
+
+    async with session_scope() as session:
+        report = await attach_primary_images(session)
+    logger.info("commons images: %s", report)
+
+
 JOBS = {
+    "attach-images": _attach_images,
     "ingest-wikidata": _ingest_wikidata,
     "seed-geography": _seed_geography,
     "seed-taxonomy": _seed_taxonomy,
