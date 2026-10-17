@@ -31,7 +31,7 @@ async def verify_firebase_token(
         from firebase_admin import auth
 
         # check_revoked: a signed-out or disabled account can't keep using a still-valid token.
-        decoded = auth.verify_id_token(credentials.credentials, check_revoked=True)
+        decoded = auth.verify_id_token(credentials.credentials, check_revoked=settings.auth_check_revoked)
         return decoded
     except Exception as exc:
         logger.warning("Token verification failed: %s", exc)

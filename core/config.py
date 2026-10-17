@@ -18,6 +18,8 @@ class Settings(BaseSettings):
     rate_limit_per_minute: int = 30
     docs_enabled: bool = True
     auth_disabled: bool = False
+    # Revocation checks call Firebase with admin credentials; local runs with only a project id turn them off.
+    auth_check_revoked: bool = True
     database_url: str = ""
     redis_url: str = ""
     # Which destination statuses the engine may recommend. Development can add

@@ -137,3 +137,26 @@ def test_browse_filters_and_pages_the_catalog(empty_db):
     assert [d["name"] for d in by_interest["items"]] == ["Lekki Conservation Centre"]  # wildlife weight 0.6 >= 0.5
     assert paged["page"] == 2 and len(paged["items"]) == 1 and paged["total"] == 2
     assert bad.status_code == 422
+
+
+def test_a_new_visitor_sees_none_of_another_users_trips(empty_db):
+    async def scenario(client):
+        from core.security import verify_firebase_token
+        from main import app
+
+        await client.post("/v1/recommendations", json=BODY, headers={"Idempotency-Key": "owner-key-1"})
+        owner = (await client.get("/v1/me/runs")).json()
+
+        async def stranger():
+            return {"uid": "a-new-guest"}
+
+        app.dependency_overrides[verify_firebase_token] = stranger
+        try:
+            theirs = (await client.get("/v1/me/runs")).json()
+        finally:
+            app.dependency_overrides.pop(verify_firebase_token, None)
+        return owner, theirs
+
+    owner, theirs = _run(scenario)
+    assert len(owner) == 1
+    assert theirs == []

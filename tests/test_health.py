@@ -57,3 +57,30 @@ def test_readyz_not_ready_when_database_unreachable(client, monkeypatch):
     response = client.get("/readyz")
     assert response.status_code == 503
     assert response.json()["checks"]["database"] is False
+
+
+def test_token_revocation_check_follows_the_setting(monkeypatch):
+    import asyncio
+
+    import firebase_admin.auth
+    from fastapi.security import HTTPAuthorizationCredentials
+
+    from core.config import get_settings
+    from core.security import verify_firebase_token
+
+    seen = {}
+
+    def fake_verify(token, **kwargs):
+        seen.update(kwargs)
+        return {"uid": "u1"}
+
+    monkeypatch.setattr(firebase_admin.auth, "verify_id_token", fake_verify)
+    settings = get_settings()
+    monkeypatch.setattr(settings, "auth_disabled", False)
+    creds = HTTPAuthorizationCredentials(scheme="Bearer", credentials="t" * 30)
+
+    asyncio.run(verify_firebase_token(creds))
+    assert seen["check_revoked"] is True
+    monkeypatch.setattr(settings, "auth_check_revoked", False)
+    asyncio.run(verify_firebase_token(creds))
+    assert seen["check_revoked"] is False
