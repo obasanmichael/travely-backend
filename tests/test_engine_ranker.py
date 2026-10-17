@@ -181,3 +181,9 @@ def test_unverified_stays_only_fill_what_priced_results_leave():
     result = recommend(CATALOG, _inputs(RATES), _request(limit=3))
     assert len(result.recommendations) == 3
     assert result.unverified_stays == ()
+
+
+def test_reports_cheapest_cost_before_a_stay_when_budget_is_the_problem():
+    result = recommend(CATALOG, _inputs({}), _request(days=13, budget=50_000, limit=3))
+    assert result.recommendations == () and result.unverified_stays == ()
+    assert result.cheapest_without_stay and result.cheapest_without_stay > 50_000

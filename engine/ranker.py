@@ -119,6 +119,9 @@ class Result:
     # Places priced except for accommodation, shown separately and labelled, so an
     # overnight search isn't empty while rates are still being verified.
     unverified_stays: tuple[Recommendation, ...] = ()
+    # Cheapest trip counting everything except an unverified stay, so "nothing fits"
+    # can say whether the budget or the missing rates is the real problem.
+    cheapest_without_stay: Optional[float] = None
 
 
 def _naira(amount: float) -> str:
@@ -313,11 +316,16 @@ def recommend(
         relaxed = []
 
     cheapest = min((c.estimate.total.low for c in known), default=None)
+    cheapest_without_stay = min(
+        (c.estimate.total.low for c in estimated if set(c.estimate.missing) <= {"accommodation"}),
+        default=None,
+    )
     if not eligible:
         notes = ("No destination fits this budget yet.",) if known else ("No priced destinations yet.",)
         return Result(
             (), tuple(relaxed), exclusions, len(catalog), cheapest_feasible_budget=cheapest, notes=notes,
             unverified_stays=tuple(_unverified_stays(estimated, request, request.limit)),
+            cheapest_without_stay=cheapest_without_stay,
         )
 
     recommendations = _rank(eligible, request, request.limit)
@@ -331,4 +339,5 @@ def recommend(
         cheapest_feasible_budget=cheapest,
         notes=notes,
         unverified_stays=tuple(unverified),
+        cheapest_without_stay=cheapest_without_stay,
     )

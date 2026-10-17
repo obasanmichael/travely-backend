@@ -113,6 +113,9 @@ class RecommendationResponse(BaseModel):
     exclusions: ExclusionsOut
     considered: int
     cheapest_feasible_budget: Optional[int]
+    cheapest_without_stay: Optional[int] = Field(
+        default=None, description="Cheapest trip of this shape, not counting an unverified place to stay"
+    )
     notes: list[str]
     recommendations: list[RecommendationOut]
     unverified_stays: list[RecommendationOut] = Field(

@@ -75,6 +75,9 @@ def _serialise(result: Result, snapshot: Snapshot, request: RecommendationReques
         cheapest_feasible_budget=(
             round(result.cheapest_feasible_budget) if result.cheapest_feasible_budget is not None else None
         ),
+        cheapest_without_stay=(
+            round(result.cheapest_without_stay) if result.cheapest_without_stay is not None else None
+        ),
         notes=list(result.notes),
         recommendations=_items(result.recommendations, snapshot),
         unverified_stays=_items(result.unverified_stays, snapshot),
