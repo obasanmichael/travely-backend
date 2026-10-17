@@ -20,6 +20,7 @@ from slowapi.middleware import SlowAPIMiddleware
 from api.routes.destinations import router as destinations_router
 from api.routes.health import router as health_router
 from api.routes.recommendations import limiter, router as recommendations_router
+from api.v1.admin import router as v1_admin_router
 from api.v1.meta import router as v1_meta_router
 from api.v1.recommendations import router as v1_recommendations_router
 from core.config import init_firebase_admin
@@ -86,3 +87,4 @@ app.include_router(recommendations_router)
 app.include_router(destinations_router)
 app.include_router(v1_meta_router)
 app.include_router(v1_recommendations_router)
+app.include_router(v1_admin_router)
