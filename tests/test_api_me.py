@@ -118,3 +118,22 @@ def test_budget_band_label_matches_the_engines_definition(empty_db):
     bands, invalid = _run(scenario)
     assert bands == ["Low", "Medium", "High"]
     assert invalid.status_code == 422
+
+
+def test_browse_filters_and_pages_the_catalog(empty_db):
+    async def scenario(client):
+        everything = (await client.get("/v1/destinations")).json()
+        by_state = (await client.get("/v1/destinations", params={"state": "NG-OG"})).json()
+        by_name = (await client.get("/v1/destinations", params={"q": "lekki"})).json()
+        by_interest = (await client.get("/v1/destinations", params={"interest": "wildlife"})).json()
+        paged = (await client.get("/v1/destinations", params={"page_size": 1, "page": 2})).json()
+        bad = await client.get("/v1/destinations", params={"state": "Ogun"})
+        return everything, by_state, by_name, by_interest, paged, bad
+
+    everything, by_state, by_name, by_interest, paged, bad = _run(scenario)
+    assert everything["total"] == 2
+    assert [d["name"] for d in by_state["items"]] == ["Olumo Rock"]
+    assert [d["name"] for d in by_name["items"]] == ["Lekki Conservation Centre"]
+    assert [d["name"] for d in by_interest["items"]] == ["Lekki Conservation Centre"]  # wildlife weight 0.6 >= 0.5
+    assert paged["page"] == 2 and len(paged["items"]) == 1 and paged["total"] == 2
+    assert bad.status_code == 422

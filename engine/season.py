@@ -26,6 +26,10 @@ HOT_LIMIT_C = 36.0
 HOTTEST_SCORE = 0.6
 
 
+# A month scoring at or above this is "great"; the frontend uses the same cut-off for the ribbon.
+GREAT_SCORE = 0.8
+
+
 @dataclass(frozen=True)
 class MonthClimate:
     month: int

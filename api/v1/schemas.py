@@ -167,3 +167,10 @@ class RunDetail(BaseModel):
 class BudgetBandResponse(BaseModel):
     band: str
     per_person_per_day: float
+
+
+class DestinationPage(BaseModel):
+    items: list[DestinationOut]
+    total: int
+    page: int
+    page_size: int
