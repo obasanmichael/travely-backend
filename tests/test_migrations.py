@@ -113,3 +113,29 @@ def test_deleting_user_removes_their_runs(migrated_db):
     _run(_execute("DELETE FROM users WHERE firebase_uid = :uid", {"uid": uid}))
     rows = _run(_execute("SELECT count(*) FROM recommendation_runs WHERE uid = :uid", {"uid": uid}))
     assert rows[0][0] == 0
+
+
+def test_downgrade_succeeds_with_seeded_data(migrated_db):
+    from pipelines.db import session_scope
+    from pipelines.geography import seed_geography
+
+    collection = {
+        "type": "FeatureCollection",
+        "features": [
+            {
+                "properties": {"shapeISO": "NG-KW", "shapeName": "Kwara"},
+                "geometry": {
+                    "type": "Polygon",
+                    "coordinates": [[[4, 8], [5, 8], [5, 9], [4, 9], [4, 8]]],
+                },
+            }
+        ],
+    }
+
+    async def _seed():
+        async with session_scope(TEST_DATABASE_URL) as session:
+            await seed_geography(session, collection)
+
+    _run(_seed())
+    command.downgrade(migrated_db, "base")
+    command.upgrade(migrated_db, "head")

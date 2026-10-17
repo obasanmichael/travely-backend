@@ -27,7 +27,17 @@ async def _seed_taxonomy() -> None:
     logger.info("seeded %d tags", count)
 
 
+async def _ingest_wikidata() -> None:
+    from pipelines.wikidata import fetch_candidates, upsert_candidates
+
+    candidates = fetch_candidates()
+    async with session_scope() as session:
+        report = await upsert_candidates(session, candidates.values())
+    logger.info("wikidata ingest: %s", report)
+
+
 JOBS = {
+    "ingest-wikidata": _ingest_wikidata,
     "seed-geography": _seed_geography,
     "seed-taxonomy": _seed_taxonomy,
 }

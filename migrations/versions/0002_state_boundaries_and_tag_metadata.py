@@ -43,8 +43,6 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_constraint(op.f('ck_sources_kind'), 'sources', type_='check')
-    op.create_check_constraint('kind', 'sources', f"kind IN ({_SOURCE_KINDS_V1})")
     op.drop_constraint(op.f('ck_tags_category'), 'tags', type_='check')
     op.drop_column('tags', 'is_interest')
     op.drop_constraint(op.f('fk_states_boundary_source_id_sources'), 'states', type_='foreignkey')
@@ -55,3 +53,7 @@ def downgrade() -> None:
     op.drop_column('states', 'iso_code')
     op.drop_constraint(op.f('fk_destinations_primary_source_id_sources'), 'destinations', type_='foreignkey')
     op.drop_column('destinations', 'primary_source_id')
+    # Runs after boundary_source_id is gone; sources of the removed kind can't stay.
+    op.execute("DELETE FROM sources WHERE kind = 'geoboundaries'")
+    op.drop_constraint(op.f('ck_sources_kind'), 'sources', type_='check')
+    op.create_check_constraint('kind', 'sources', f"kind IN ({_SOURCE_KINDS_V1})")
