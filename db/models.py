@@ -268,6 +268,7 @@ class PriceObservation(Base):
             "city_id",
             "destination_id",
             "origin_state_id",
+            "subject",
             "observed_on",
             name="uq_price_observations_natural_key",
             postgresql_nulls_not_distinct=True,
@@ -285,6 +286,9 @@ class PriceObservation(Base):
     )
     origin_state_id: Mapped[Optional[int]] = mapped_column(ForeignKey("states.id"))
     mode: Mapped[Optional[str]] = mapped_column(Text)
+    # What was priced, e.g. a hotel's name. Lets several hotels in one place be
+    # recorded on the same day without colliding on the natural key.
+    subject: Mapped[Optional[str]] = mapped_column(Text)
     amount: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)
     currency: Mapped[str] = mapped_column(String(3), nullable=False)
     observed_on: Mapped[date] = mapped_column(Date, nullable=False)
