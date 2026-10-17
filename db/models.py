@@ -42,6 +42,7 @@ PRICE_UNITS = ("per_night", "per_meal", "per_day", "per_trip", "per_person")
 TIERS = ("budget", "mid", "premium")
 SOURCE_KINDS = (
     "osm",
+    "geoboundaries",
     "wikidata",
     "wikipedia",
     "commons",
@@ -52,6 +53,7 @@ SOURCE_KINDS = (
     "manual",
     "user_report",
 )
+TAG_CATEGORIES = ("nature", "activity", "culture", "leisure", "audience")
 RUN_EVENTS = ("impression", "save", "dismiss", "detail_view")
 REPORT_STATUSES = ("pending", "accepted", "rejected")
 
@@ -74,15 +76,24 @@ class Country(Base):
 
 class State(Base):
     __tablename__ = "states"
-    __table_args__ = (UniqueConstraint("country_code", "slug", name="uq_states_country_slug"),)
+    __table_args__ = (
+        UniqueConstraint("country_code", "slug", name="uq_states_country_slug"),
+        Index("ix_states_boundary", "boundary", postgresql_using="gist"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, Identity(), primary_key=True)
     country_code: Mapped[str] = mapped_column(ForeignKey("countries.code"), nullable=False)
+    # ISO 3166-2 code (e.g. NG-LA): the stable key ingestion jobs match on.
+    iso_code: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
     name: Mapped[str] = mapped_column(Text, nullable=False)
     slug: Mapped[str] = mapped_column(Text, nullable=False)
     centroid: Mapped[Optional[Any]] = mapped_column(
         Geography("POINT", srid=4326, spatial_index=False), nullable=True
     )
+    boundary: Mapped[Optional[Any]] = mapped_column(
+        Geography("MULTIPOLYGON", srid=4326, spatial_index=False), nullable=True
+    )
+    boundary_source_id: Mapped[Optional[int]] = mapped_column(ForeignKey("sources.id"))
 
 
 class City(Base):
@@ -113,11 +124,14 @@ class Source(Base):
 
 class Tag(Base):
     __tablename__ = "tags"
+    __table_args__ = (CheckConstraint(_in("category", TAG_CATEGORIES), name="category"),)
 
     slug: Mapped[str] = mapped_column(Text, primary_key=True)
     label: Mapped[str] = mapped_column(Text, nullable=False)
     category: Mapped[str] = mapped_column(Text, nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text)
+    # Selectable in the quiz; some tags (e.g. family-friendly) are filters, not interests.
+    is_interest: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
 
 
 class Destination(Base):
@@ -145,6 +159,7 @@ class Destination(Base):
         Geography("POINT", srid=4326, spatial_index=False), nullable=False
     )
     status: Mapped[str] = mapped_column(Text, nullable=False, server_default="candidate")
+    primary_source_id: Mapped[Optional[int]] = mapped_column(ForeignKey("sources.id"))
     osm_id: Mapped[Optional[str]] = mapped_column(Text, unique=True)
     wikidata_id: Mapped[Optional[str]] = mapped_column(Text, unique=True)
     wikipedia_url: Mapped[Optional[str]] = mapped_column(Text)

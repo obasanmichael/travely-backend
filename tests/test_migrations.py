@@ -8,7 +8,6 @@ import uuid
 import pytest
 from alembic import command
 from alembic.autogenerate import compare_metadata
-from alembic.config import Config
 from alembic.migration import MigrationContext
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
@@ -21,21 +20,6 @@ from db.url import to_asyncpg_url
 TEST_DATABASE_URL = os.environ.get("TEST_DATABASE_URL", "")
 
 pytestmark = pytest.mark.skipif(not TEST_DATABASE_URL, reason="TEST_DATABASE_URL not set")
-
-
-def _alembic_config() -> Config:
-    config = Config("alembic.ini")
-    config.set_main_option("sqlalchemy.url", TEST_DATABASE_URL)
-    return config
-
-
-@pytest.fixture(scope="module")
-def migrated_db():
-    config = _alembic_config()
-    command.downgrade(config, "base")
-    command.upgrade(config, "head")
-    yield config
-    command.downgrade(config, "base")
 
 
 def _run(coro):
@@ -82,9 +66,11 @@ async def _seed_place() -> int:
         "INSERT INTO countries (code, name, currency) VALUES ('NG', 'Nigeria', 'NGN') "
         "ON CONFLICT DO NOTHING"
     )
+    suffix = uuid.uuid4().hex[:6]
     rows = await _execute(
-        "INSERT INTO states (country_code, name, slug) VALUES ('NG', 'Ogun', :slug) RETURNING id",
-        {"slug": f"ogun-{uuid.uuid4().hex[:6]}"},
+        "INSERT INTO states (country_code, iso_code, name, slug) "
+        "VALUES ('NG', :iso, 'Ogun', :slug) RETURNING id",
+        {"iso": f"NG-T{suffix}", "slug": f"ogun-{suffix}"},
     )
     return rows[0][0]
 
