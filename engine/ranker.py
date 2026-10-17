@@ -116,6 +116,9 @@ class Result:
     engine_version: str = ENGINE_VERSION
     cheapest_feasible_budget: Optional[float] = None
     notes: tuple[str, ...] = field(default_factory=tuple)
+    # Places priced except for accommodation, shown separately and labelled, so an
+    # overnight search isn't empty while rates are still being verified.
+    unverified_stays: tuple[Recommendation, ...] = ()
 
 
 def _naira(amount: float) -> str:
@@ -168,7 +171,13 @@ def _reasons(
         reasons.append(Reason("interests", f"Matches your interest in {', '.join(labels(matched[:3])).lower()}"))
 
     total = candidate.estimate.total
-    if total.high <= request.budget:
+    if "accommodation" in candidate.estimate.missing:
+        reasons.append(Reason(
+            "cost",
+            f"Travel and food come to {_naira(total.low)}–{_naira(total.high)}; "
+            "places-to-stay prices aren't verified yet",
+        ))
+    elif total.high <= request.budget:
         reasons.append(Reason("cost", f"About {_naira(request.budget - total.mid)} under your budget"))
     elif total.low <= request.budget:
         reasons.append(Reason("cost", f"Fits your budget at the lower end ({_naira(total.low)}–{_naira(total.high)})"))
@@ -209,37 +218,12 @@ def _mmr(scores: np.ndarray, similarity: np.ndarray, limit: int) -> list[int]:
     return selected
 
 
-def recommend(
-    catalog: Sequence[Destination], inputs: CostInputs, request: Request
-) -> Result:
-    trip = TripRequest(request.origin, request.days, request.travellers, request.tier)
-
-    estimated = [
-        _Candidate(d, estimate_trip(inputs, trip, d.id, d.place, d.city_key)) for d in catalog
-    ]
-    known = [c for c in estimated if c.estimate.complete]
-    cost_unknown = len(estimated) - len(known)
-
-    # Stage 1, relaxing in a fixed order until there are enough results.
-    relaxed: list[str] = []
+def _rank(candidates: Sequence[_Candidate], request: Request, limit: int) -> list[Recommendation]:
+    """Stages 2-4 for a set of candidates that already passed the hard constraints."""
+    if not candidates:
+        return []
+    eligible = list(candidates)
     month = request.month
-    eligible, exclusions = _eligible(known, request, BUDGET_TOLERANCE, enforce_distance=True)
-    if len(eligible) < request.limit:
-        eligible, exclusions = _eligible(known, request, RELAXED_BUDGET_TOLERANCE, enforce_distance=True)
-        relaxed.append("budget")
-    if len(eligible) < request.limit and request.max_travel_hours is not None:
-        eligible, exclusions = _eligible(known, request, RELAXED_BUDGET_TOLERANCE, enforce_distance=False)
-        relaxed.append("travel_time")
-    exclusions = Exclusions(exclusions.over_budget, exclusions.too_far, cost_unknown)
-    # Relaxation that didn't add anything isn't worth telling the user about.
-    if relaxed and len(eligible) == len(_eligible(known, request, BUDGET_TOLERANCE, True)[0]):
-        relaxed = []
-
-    cheapest = min((c.estimate.total.low for c in known), default=None)
-    if not eligible:
-        notes = ("No destination fits this budget yet.",) if known else ("No priced destinations yet.",)
-        return Result((), tuple(relaxed), exclusions, len(catalog), cheapest_feasible_budget=cheapest, notes=notes)
-
     # Stage 2: fuzzy practicality.
     seasons = [season_fit(c.destination.climate, c.destination.tags, month) for c in eligible]
     affordability = np.array([request.budget / max(c.estimate.total.mid, 1.0) for c in eligible])
@@ -260,11 +244,11 @@ def recommend(
     similarity = np.maximum(similarity, np.where(states[:, None] == states[None, :], SAME_STATE_SIMILARITY, 0))
     if has_interests(request.preferences):
         relevant = np.flatnonzero(content >= CONTENT_FLOOR)
-        picks = [int(relevant[i]) for i in _mmr(scores[relevant], similarity[np.ix_(relevant, relevant)], request.limit)]
+        picks = [int(relevant[i]) for i in _mmr(scores[relevant], similarity[np.ix_(relevant, relevant)], limit)]
         fillers = [int(i) for i in np.argsort(-scores) if int(i) not in set(relevant)]
-        picks += fillers[: request.limit - len(picks)]
+        picks += fillers[: limit - len(picks)]
     else:
-        picks = _mmr(scores, similarity, request.limit)
+        picks = _mmr(scores, similarity, limit)
 
     recommendations = []
     for index in picks:
@@ -284,6 +268,60 @@ def recommend(
                 reasons=_reasons(request, candidate, matched, season_score, best_month),
             )
         )
+    return recommendations
+
+
+UNVERIFIED_STAYS_LIMIT = 4
+
+
+def _unverified_stays(estimated: Sequence[_Candidate], request: Request, room: int) -> list[Recommendation]:
+    """Overnight trips to places whose only gap is accommodation, if what we can price fits."""
+    if room <= 0 or request.days < 2:
+        return []
+    partial = [
+        c for c in estimated
+        if c.estimate.missing == ("accommodation",)
+        and c.estimate.total.low <= request.budget * BUDGET_TOLERANCE
+        and (request.max_travel_hours is None or c.estimate.travel_hours <= request.max_travel_hours)
+    ]
+    return _rank(partial, request, min(room, UNVERIFIED_STAYS_LIMIT))
+
+
+def recommend(
+    catalog: Sequence[Destination], inputs: CostInputs, request: Request
+) -> Result:
+    trip = TripRequest(request.origin, request.days, request.travellers, request.tier)
+
+    estimated = [
+        _Candidate(d, estimate_trip(inputs, trip, d.id, d.place, d.city_key)) for d in catalog
+    ]
+    known = [c for c in estimated if c.estimate.complete]
+    cost_unknown = len(estimated) - len(known)
+
+    # Stage 1, relaxing in a fixed order until there are enough results.
+    relaxed: list[str] = []
+    eligible, exclusions = _eligible(known, request, BUDGET_TOLERANCE, enforce_distance=True)
+    if len(eligible) < request.limit:
+        eligible, exclusions = _eligible(known, request, RELAXED_BUDGET_TOLERANCE, enforce_distance=True)
+        relaxed.append("budget")
+    if len(eligible) < request.limit and request.max_travel_hours is not None:
+        eligible, exclusions = _eligible(known, request, RELAXED_BUDGET_TOLERANCE, enforce_distance=False)
+        relaxed.append("travel_time")
+    exclusions = Exclusions(exclusions.over_budget, exclusions.too_far, cost_unknown)
+    # Relaxation that didn't add anything isn't worth telling the user about.
+    if relaxed and len(eligible) == len(_eligible(known, request, BUDGET_TOLERANCE, True)[0]):
+        relaxed = []
+
+    cheapest = min((c.estimate.total.low for c in known), default=None)
+    if not eligible:
+        notes = ("No destination fits this budget yet.",) if known else ("No priced destinations yet.",)
+        return Result(
+            (), tuple(relaxed), exclusions, len(catalog), cheapest_feasible_budget=cheapest, notes=notes,
+            unverified_stays=tuple(_unverified_stays(estimated, request, request.limit)),
+        )
+
+    recommendations = _rank(eligible, request, request.limit)
+    unverified = _unverified_stays(estimated, request, request.limit - len(recommendations))
     notes = () if has_interests(request.preferences) else ("Popular picks: add interests for a closer match.",)
     return Result(
         tuple(recommendations),
@@ -292,4 +330,5 @@ def recommend(
         len(catalog),
         cheapest_feasible_budget=cheapest,
         notes=notes,
+        unverified_stays=tuple(unverified),
     )

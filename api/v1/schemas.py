@@ -53,6 +53,7 @@ class CostComponentOut(BaseModel):
 class CostOut(BaseModel):
     total: MoneyRange
     confidence: str
+    missing: list[str] = Field(default_factory=list, description="Components not yet priced; excluded from total")
     components: list[CostComponentOut]
     road_km: int
     travel_hours: float
@@ -114,6 +115,10 @@ class RecommendationResponse(BaseModel):
     cheapest_feasible_budget: Optional[int]
     notes: list[str]
     recommendations: list[RecommendationOut]
+    unverified_stays: list[RecommendationOut] = Field(
+        default_factory=list,
+        description="Overnight picks priced except for accommodation, which isn't verified yet",
+    )
 
 
 class StateOut(BaseModel):

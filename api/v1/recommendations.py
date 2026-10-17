@@ -32,9 +32,9 @@ router = APIRouter(prefix="/v1", tags=["Recommendations"])
 TOP_TAGS = 4
 
 
-def _serialise(result: Result, snapshot: Snapshot, request: RecommendationRequest) -> RecommendationResponse:
+def _items(recommendations, snapshot: Snapshot) -> list[RecommendationOut]:
     items = []
-    for rec in result.recommendations:
+    for rec in recommendations:
         d = rec.destination
         details = snapshot.details.get(d.id)
         photo = details.photo if details else None
@@ -63,6 +63,7 @@ def _serialise(result: Result, snapshot: Snapshot, request: RecommendationReques
                 cost=CostOut(
                     total=MoneyRange(low=round(rec.estimate.total.low), high=round(rec.estimate.total.high)),
                     confidence=rec.estimate.confidence.value,
+                    missing=list(rec.estimate.missing),
                     components=[
                         CostComponentOut(
                             name=c.name,
@@ -80,6 +81,10 @@ def _serialise(result: Result, snapshot: Snapshot, request: RecommendationReques
                 reasons=[ReasonOut(kind=r.kind, text=r.text) for r in rec.reasons],
             )
         )
+    return items
+
+
+def _serialise(result: Result, snapshot: Snapshot, request: RecommendationRequest) -> RecommendationResponse:
     per_person_per_day = request.budget / (request.travellers * request.days)
     return RecommendationResponse(
         engine_version=result.engine_version,
@@ -92,7 +97,8 @@ def _serialise(result: Result, snapshot: Snapshot, request: RecommendationReques
             round(result.cheapest_feasible_budget) if result.cheapest_feasible_budget is not None else None
         ),
         notes=list(result.notes),
-        recommendations=items,
+        recommendations=_items(result.recommendations, snapshot),
+        unverified_stays=_items(result.unverified_stays, snapshot),
     )
 
 

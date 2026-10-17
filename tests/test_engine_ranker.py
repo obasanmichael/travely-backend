@@ -158,3 +158,26 @@ def test_unrelated_places_only_fill_empty_slots():
     contents = [r.content for r in result.recommendations]
     relevant = [c for c in contents if c >= 0.15]
     assert contents[: len(relevant)] == relevant
+
+
+def test_overnight_search_offers_unverified_stays_when_rates_are_missing():
+    no_rates = _inputs({})  # nothing has accommodation prices
+    result = recommend(CATALOG, no_rates, _request(days=3, limit=3))
+    assert result.recommendations == ()
+    assert result.unverified_stays
+    for rec in result.unverified_stays:
+        assert rec.estimate.missing == ("accommodation",)
+        cost = next(r for r in rec.reasons if r.kind == "cost")
+        assert "aren't verified yet" in cost.text
+
+
+def test_day_trips_never_need_unverified_stays():
+    result = recommend(CATALOG, _inputs({}), _request(days=1, limit=3))
+    assert result.unverified_stays == ()
+    assert result.recommendations
+
+
+def test_unverified_stays_only_fill_what_priced_results_leave():
+    result = recommend(CATALOG, _inputs(RATES), _request(limit=3))
+    assert len(result.recommendations) == 3
+    assert result.unverified_stays == ()
