@@ -81,7 +81,17 @@ def init_firebase_admin() -> None:
 
     if settings.firebase_project_id:
         try:
-            firebase_admin.initialize_app(options={"projectId": settings.firebase_project_id})
+            if settings.auth_check_revoked:
+                firebase_admin.initialize_app(options={"projectId": settings.firebase_project_id})
+            else:
+                # Verifying a token only needs Google's public keys, so no credentials are looked up.
+                class _VerifyOnly(credentials.Base):
+                    def get_credential(self):
+                        from google.auth.credentials import AnonymousCredentials
+
+                        return AnonymousCredentials()
+
+                firebase_admin.initialize_app(_VerifyOnly(), {"projectId": settings.firebase_project_id})
             logger.info("Firebase Admin initialized with project ID only")
             return
         except Exception as exc:
