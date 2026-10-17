@@ -7,15 +7,14 @@ from api.routes.recommendations import limiter
 from api.v1.schemas import (
     CostComponentOut,
     CostOut,
-    DestinationOut,
     ExclusionsOut,
     MoneyRange,
-    PhotoOut,
     ReasonOut,
     RecommendationOut,
     RecommendationRequest,
     RecommendationResponse,
 )
+from api.v1.serializers import destination_out
 from core.security import verify_firebase_token
 from db import session as db_session
 from engine.content import Preferences
@@ -29,32 +28,12 @@ from services import snapshot_store
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/v1", tags=["Recommendations"])
 
-TOP_TAGS = 4
-
-
 def _items(recommendations, snapshot: Snapshot) -> list[RecommendationOut]:
     items = []
     for rec in recommendations:
-        d = rec.destination
-        details = snapshot.details.get(d.id)
-        photo = details.photo if details else None
         items.append(
             RecommendationOut(
-                destination=DestinationOut(
-                    id=d.id,
-                    slug=d.slug,
-                    name=d.name,
-                    state=d.state_name,
-                    state_iso=d.place.state_iso,
-                    latitude=d.place.lat,
-                    longitude=d.place.lon,
-                    description=details.description if details else None,
-                    wikipedia_url=details.wikipedia_url if details else None,
-                    photo=PhotoOut(**photo.__dict__) if photo else None,
-                    tags=[t for t, _ in sorted(d.tags.items(), key=lambda kv: -kv[1])[:TOP_TAGS]],
-                    best_months=list(details.best_months) if details else [],
-                    month_scores=list(details.month_scores) if details else [],
-                ),
+                destination=destination_out(rec.destination, snapshot),
                 score=rec.score,
                 match=rec.content,
                 practicality=rec.practicality,
