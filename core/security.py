@@ -6,12 +6,10 @@ from typing import Any, Optional
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from core.config import get_settings, init_firebase_admin
+from core.config import get_settings
 
 logger = logging.getLogger(__name__)
 _bearer = HTTPBearer(auto_error=False)
-
-init_firebase_admin()
 
 
 async def verify_firebase_token(

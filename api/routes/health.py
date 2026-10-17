@@ -3,10 +3,29 @@ from __future__ import annotations
 from typing import Dict
 
 from fastapi import APIRouter
+from fastapi.responses import JSONResponse
+
+from services.data_cache import get_catalog_size
 
 router = APIRouter(tags=["Health"])
 
 
+@router.get("/livez")
+def liveness() -> Dict[str, str]:
+    return {"status": "alive"}
+
+
+@router.get("/readyz")
+def readiness() -> JSONResponse:
+    checks = {"catalog": get_catalog_size() > 0}
+    ready = all(checks.values())
+    return JSONResponse(
+        status_code=200 if ready else 503,
+        content={"status": "ready" if ready else "not_ready", "checks": checks},
+    )
+
+
+# Kept for Render's existing health check until deploys move to Kubernetes.
 @router.get("/health")
 def health_check() -> Dict[str, str]:
     return {"status": "healthy"}

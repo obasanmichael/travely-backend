@@ -2,6 +2,7 @@ import json
 import logging
 from functools import lru_cache
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 logger = logging.getLogger(__name__)
@@ -17,6 +18,14 @@ class Settings(BaseSettings):
     rate_limit_per_minute: int = 30
     docs_enabled: bool = True
     auth_disabled: bool = False
+    database_url: str = ""
+    redis_url: str = ""
+
+    @model_validator(mode="after")
+    def _guard_production(self) -> "Settings":
+        if self.is_production and self.auth_disabled:
+            raise ValueError("AUTH_DISABLED cannot be true when ENV=production")
+        return self
 
     @property
     def allowed_origins_list(self) -> list[str]:

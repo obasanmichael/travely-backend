@@ -1,4 +1,6 @@
 import logging
+from contextlib import asynccontextmanager
+from typing import AsyncIterator
 
 from core.config import get_settings
 from core.logging_config import configure_logging
@@ -17,11 +19,22 @@ from slowapi.middleware import SlowAPIMiddleware
 from api.routes.destinations import router as destinations_router
 from api.routes.health import router as health_router
 from api.routes.recommendations import limiter, router as recommendations_router
+from core.config import init_firebase_admin
 from core.exceptions import global_exception_handler, http_exception_handler
 from core.middleware import RequestLoggingMiddleware
 from services.data_cache import load_catalog
 
 logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    init_firebase_admin()
+    load_catalog()
+    logger.info("Travely API started env=%s docs_enabled=%s", settings.env, settings.docs_enabled)
+    yield
+    logger.info("Travely API shutting down")
+
 
 app = FastAPI(
     title="Travely API",
@@ -29,14 +42,8 @@ app = FastAPI(
     version="2.0.0",
     docs_url="/docs" if settings.docs_enabled else None,
     redoc_url="/redoc" if settings.docs_enabled else None,
+    lifespan=lifespan,
 )
-
-
-@app.on_event("startup")
-async def startup_load_catalog() -> None:
-    load_catalog()
-    logger.info("Travely API started env=%s docs_enabled=%s", settings.env, settings.docs_enabled)
-
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
