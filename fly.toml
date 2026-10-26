@@ -13,6 +13,9 @@ primary_region = "lhr"
   AUTH_DISABLED = "false"
   DOCS_ENABLED = "false"
   ALLOWED_ORIGINS = "https://travely-app-two.vercel.app"
+  # Public project id, not a secret. With no service-account key, token revocation checks are off.
+  FIREBASE_PROJECT_ID = "travely-app-6aa48"
+  AUTH_CHECK_REVOKED = "false"
 
 [deploy]
   # Runs in a temporary machine before the new version takes traffic; a failed migration stops the deploy.
