@@ -66,3 +66,30 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build runtime image
         run: docker build --target runtime -t travely-api:${{ github.sha }} .
+
+  deploy:
+    # Only after tests pass on main, and only once the repo variable DEPLOY_ENABLED is "true"
+    # (set it after the Fly app and FLY_API_TOKEN exist). The "production" environment can require a reviewer.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.DEPLOY_ENABLED == 'true'
+    needs: [test, docker]
+    runs-on: ubuntu-latest
+    environment: production
+    concurrency: deploy-production
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: superfly/flyctl-actions/setup-flyctl@v1
+
+      # One machine: the rate limiter counts per process until Redis is added.
+      - name: Deploy to Fly.io
+        run: flyctl deploy --remote-only --ha=false
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Check the new version is ready
+        run: |
+          for i in $(seq 1 12); do
+            if curl -fsS https://travely-api.fly.dev/readyz; then exit 0; fi
+            sleep 10
+          done
+          echo "readyz never succeeded" && exit 1
